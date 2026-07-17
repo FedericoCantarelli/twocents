@@ -1,3 +1,5 @@
+from datetime import datetime
+from datetime import timedelta
 from enum import Enum
 from typing import Any
 
@@ -32,7 +34,10 @@ class RatesClient:
 
     def _make_get_request(self, endpoint: str, headers: dict[str, str] | None = None):
         url = f"{self.base_url}/{endpoint}"
-        url += f"?lang={self.language.value}"
+        if len(endpoint.split("&")) <= 1:
+            url += f"?lang={self.language.value}"
+        else:
+            url += f"&lang={self.language.value}"
         print_verbose(f"Making GET request to URL: {url}")
         response = requests.get(url=url, headers=headers)
         print_verbose(f"Received response with status code: {response.status_code}")
@@ -44,3 +49,17 @@ class RatesClient:
     def get_available_currencies(self) -> dict[str, Any]:
         headers = {"Accept": "application/json"}
         return self._make_get_request("currencies", headers=headers)
+
+    def get_daily_exchange_rates(
+        self,
+        from_currency: str,
+        to_currency: str,
+        reference_date: datetime | None = None,
+    ) -> dict[str, Any]:
+        if reference_date is None:
+            reference_date = datetime.now() - timedelta(days=1)
+        headers = {"Accept": "application/json"}
+        endpoint = f"dailyRates?referenceDate={reference_date.strftime('%Y-%m-%d')}"
+        endpoint += f"&baseCurrencyIsoCode={from_currency}"
+        endpoint += f"&currencyIsoCode={to_currency}"
+        return self._make_get_request(endpoint, headers=headers)
