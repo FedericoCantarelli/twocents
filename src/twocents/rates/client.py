@@ -1,5 +1,4 @@
 from datetime import datetime
-from datetime import timedelta
 from enum import Enum
 from typing import Any
 
@@ -13,6 +12,19 @@ class Language(Enum):
 
     IT = "it"
     EN = "en"
+
+
+def _exclude_fields(fields: list[str]):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            response = func(*args, **kwargs)
+            if isinstance(response, dict):
+                return {k: v for k, v in response.items() if k not in fields}
+            return response
+
+        return wrapper
+
+    return decorator
 
 
 def _check_response_code(func):
@@ -50,6 +62,7 @@ class RatesClient:
         headers = {"Accept": "application/json"}
         return self._make_get_request("currencies", headers=headers)
 
+    @_exclude_fields(["resultsInfo"])
     def get_daily_exchange_rates(
         self,
         from_currency: str,
@@ -57,7 +70,7 @@ class RatesClient:
         reference_date: datetime | None = None,
     ) -> dict[str, Any]:
         if reference_date is None:
-            reference_date = datetime.now() - timedelta(days=1)
+            reference_date = datetime.now()
         headers = {"Accept": "application/json"}
         endpoint = f"dailyRates?referenceDate={reference_date.strftime('%Y-%m-%d')}"
         endpoint += f"&baseCurrencyIsoCode={from_currency}"
