@@ -224,3 +224,6 @@ __marimo__/
 
 # Testing
 examples/
+
+# Doc
+doc.pdf

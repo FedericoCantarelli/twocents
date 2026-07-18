@@ -76,3 +76,55 @@ class RatesClient:
         endpoint += f"&baseCurrencyIsoCode={from_currency}"
         endpoint += f"&currencyIsoCode={to_currency}"
         return self._make_get_request(endpoint, headers=headers)
+
+    @_exclude_fields(["resultsInfo"])
+    def get_avg_monthly_exchange_rates(
+        self,
+        from_currency: str,
+        to_currency: str,
+        month: int,
+        year: int,
+    ) -> dict[str, Any]:
+        headers = {"Accept": "application/json"}
+        endpoint = f"monthlyAverageRates?month={month}&year={year}"
+        endpoint += f"&baseCurrencyIsoCode={from_currency}"
+        endpoint += f"&currencyIsoCode={to_currency}"
+        return self._make_get_request(endpoint, headers=headers)
+
+    @_exclude_fields(["resultsInfo"])
+    def get_avg_yearly_exchange_rates(
+        self,
+        from_currency: str,
+        to_currency: str,
+        year: int,
+    ) -> dict[str, Any]:
+        headers = {"Accept": "application/json"}
+        endpoint = f"annualAverageRates?year={year}"
+        endpoint += f"&baseCurrencyIsoCode={from_currency}"
+        endpoint += f"&currencyIsoCode={to_currency}"
+        return self._make_get_request(endpoint, headers=headers)
+
+    @_exclude_fields(["resultsInfo"])
+    def get_daily_exchange_rates_historical(
+        self,
+        from_currency: str,
+        to_currency: str,
+        from_date: datetime,
+        to_date: datetime | None = None,
+    ) -> dict[str, Any]:
+        if to_date is None:
+            to_date = datetime.now()
+        headers = {"Accept": "application/json"}
+        endpoint = f"dailyTimeSeries?startDate={from_date.strftime('%Y-%m-%d')}"
+        endpoint += f"&endDate={to_date.strftime('%Y-%m-%d')}"
+        endpoint += f"&baseCurrencyIsoCode={from_currency}"
+        endpoint += f"&currencyIsoCode={to_currency}"
+        return self._make_get_request(endpoint, headers=headers)
+
+
+if __name__ == "__main__":
+    client = RatesClient()
+    rate = client.get_daily_exchange_rates_historical(
+        "KWD", "EUR", from_date=datetime(2026, 7, 1), to_date=datetime(2026, 7, 18)
+    )
+    print(rate)
