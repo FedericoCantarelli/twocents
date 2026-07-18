@@ -1,7 +1,7 @@
 [project]
 name = "twocents"
 version = "0.1.0"
-description = "Add your description here"
+description = "A very simple CLI tool for fetching exchange rates from Banca d'Italia."
 readme = "README.md"
 authors = [
     { name = "FedericoCantarelli", email = "fede.cantarelli98@gmail.com" }
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-2cents = "twocents:main"
+twocents = "twocents:main"
 
 [build-system]
 requires = ["uv_build>=0.11.29,<0.12.0"]
