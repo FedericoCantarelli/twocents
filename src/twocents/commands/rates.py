@@ -1,7 +1,10 @@
 import os
+from datetime import datetime
 
 import click
 
+from twocents.exporters.base import Exporter
+from twocents.exporters.csv_exporter import CsvExporter
 from twocents.exporters.json_exporter import JsonExporter
 from twocents.exporters.std_out import StdOutExporter
 from twocents.rates.client import RatesClient
@@ -38,7 +41,7 @@ def rates():
     required=False,
     default=False,
 )
-def list(format, file, verbose):
+def list(format: str | None, file: str | None, verbose: bool):
     """List all available currencies from Banca d'Italia."""
     if format is not None:
         if format not in ["json", "csv"]:
@@ -58,14 +61,18 @@ def list(format, file, verbose):
         if format == "json":
             exporter = JsonExporter(output)
             exporter.export(file)
+        if format == "csv":
+            raise NotImplementedError(
+                "CSV export is not yet implemented for the list command."
+            )
         # elif format == "csv":
         #     from twocents.exporters.csv import CsvExporter
 
         #     exporter = CsvExporter(currencies)
         #     exporter.export()
     else:
-        exporter = StdOutExporter(output)
-        exporter.export()
+        std_exporter = StdOutExporter(output)
+        std_exporter.export()
 
 
 @rates.command()
@@ -158,7 +165,7 @@ def convert(
             raise click.BadParameter(
                 f"Invalid format: {format}. Expected 'json' or 'csv'."
             )
-        if not file:
+        if file is None:
             raise click.BadParameter(
                 "The --file option is required when using the --format option."
             )
@@ -182,15 +189,45 @@ def convert(
             from_date=parsed_from_date,
             to_date=parsed_to_date,
         )
+    if monthly:
+        try:
+            parsed_from_date = parse_datetime(from_date)
+        except ValueError as e:
+            raise click.BadParameter(
+                f"Got --from-date: {from_date}. Expected format: 'YYYY-MM-DD'"
+            ) from e
+        # Get all the years and months between the from_date and to_date
+        parsed_to_date = safe_parse_datetime(to_date) or datetime.now()
+        if parsed_from_date > parsed_to_date:
+            raise click.BadParameter(
+                f"Got --from-date: {from_date} and --to-date: {to_date}. "
+                f"Expected --from-date to be before --to-date."
+            )
+
+        years_months = [
+            (year, month)
+            for year in range(parsed_from_date.year, parsed_to_date.year + 1)
+            for month in range(1, 13)
+            if (year > parsed_from_date.year or month >= parsed_from_date.month)
+            and (year < parsed_to_date.year or month <= parsed_to_date.month)
+        ]
+        output = []
+        for year, month in years_months:
+            output.extend(
+                client.get_avg_monthly_exchange_rates(
+                    from_currency=from_currency,
+                    to_currency=to_currency,
+                    month=month,
+                    year=year,
+                )["rates"]
+            )
     if format is not None:
+        exporter: Exporter
         if format == "json":
             exporter = JsonExporter(output)
-            exporter.export(file)
-        # elif format == "csv":
-        #     from twocents.exporters.csv import CsvExporter
-
-        #     exporter = CsvExporter(currencies)
-        #     exporter.export()
+        elif format == "csv":
+            exporter = CsvExporter(output)
+        exporter.export(file_path=file)
     else:
-        exporter = StdOutExporter(output)
-        exporter.export()
+        std_exporter: StdOutExporter = StdOutExporter(output)
+        std_exporter.export()

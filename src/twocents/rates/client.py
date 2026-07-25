@@ -31,7 +31,9 @@ def _check_response_code(func):
     def wrapper(*args, **kwargs):
         response = func(*args, **kwargs)
         if response.status_code != 200:
-            raise Exception(f"Request failed with status code {response.status_code}")
+            raise Exception(
+                f"Request failed with status code {response.status_code}"
+            )
         return response
 
     return wrapper
@@ -44,7 +46,9 @@ class RatesClient:
         )
         self.language = language
 
-    def _make_get_request(self, endpoint: str, headers: dict[str, str] | None = None):
+    def _make_get_request(
+        self, endpoint: str, headers: dict[str, str] | None = None
+    ):
         url = f"{self.base_url}/{endpoint}"
         if len(endpoint.split("&")) <= 1:
             url += f"?lang={self.language.value}"
@@ -52,7 +56,9 @@ class RatesClient:
             url += f"&lang={self.language.value}"
         print_verbose(f"Making GET request to URL: {url}")
         response = requests.get(url=url, headers=headers)
-        print_verbose(f"Received response with status code: {response.status_code}")
+        print_verbose(
+            f"Received response with status code: {response.status_code}"
+        )
         if response.status_code == 200:
             return response.json()
         else:
@@ -72,7 +78,9 @@ class RatesClient:
         if reference_date is None:
             reference_date = datetime.now()
         headers = {"Accept": "application/json"}
-        endpoint = f"dailyRates?referenceDate={reference_date.strftime('%Y-%m-%d')}"
+        endpoint = (
+            f"dailyRates?referenceDate={reference_date.strftime('%Y-%m-%d')}"
+        )
         endpoint += f"&baseCurrencyIsoCode={from_currency}"
         endpoint += f"&currencyIsoCode={to_currency}"
         return self._make_get_request(endpoint, headers=headers)
@@ -125,6 +133,9 @@ class RatesClient:
 if __name__ == "__main__":
     client = RatesClient()
     rate = client.get_daily_exchange_rates_historical(
-        "KWD", "EUR", from_date=datetime(2026, 7, 1), to_date=datetime(2026, 7, 18)
+        "KWD",
+        "EUR",
+        from_date=datetime(2026, 7, 1),
+        to_date=datetime(2026, 7, 18),
     )
     print(rate)
