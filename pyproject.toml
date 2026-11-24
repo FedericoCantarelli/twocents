@@ -1,20 +1,36 @@
 [project]
 name = "twocents"
 version = "0.1.0"
-description = "A very simple CLI tool for fetching exchange rates from Banca d'Italia."
+description = "Exchange rates from Banca d'Italia, as a Python library and a CLI."
 readme = "README.md"
 authors = [
     { name = "FedericoCantarelli", email = "fede.cantarelli98@gmail.com" }
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 dependencies = [
-    "click>=8.4.2",
-    "requests>=2.34.2",
+    "requests==2.34.2",
+]
+
+[project.optional-dependencies]
+cli = [
+    "click==8.4.2",
 ]
 
 [project.scripts]
-twocents = "twocents:main"
+tc = "twocents.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.11.29,<0.12.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "twocents[cli]",
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+    "ty>=0.0.109",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

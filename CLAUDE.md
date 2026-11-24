@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-`twocents` is a Python CLI (Click-based) that fetches currency exchange rates from
-Banca d'Italia's public REST API (`tassidicambio.bancaditalia.it`). No API key is
-required. Requires Python >= 3.13. Dependencies are managed with `uv`.
+`twocents` fetches currency exchange rates from Banca d'Italia's public REST API
+(`tassidicambio.bancaditalia.it`). It is both a Python library (depends only on
+`requests`) and a Click CLI (`tc`, behind the `cli` extra). No API key is required.
+Requires Python >= 3.13. Dependencies are managed with `uv`; `uv sync` installs the
+`cli` extra via the dev group.
 
 ## Commands
 
@@ -14,7 +16,7 @@ required. Requires Python >= 3.13. Dependencies are managed with `uv`.
 # Install / sync the environment (creates .venv from uv.lock)
 uv sync
 
-# Run the CLI (entry point is `tc`, mapped to twocents:main)
+# Run the CLI (entry point `tc` -> twocents.cli:main)
 uv run tc --help
 uv run tc version
 uv run tc rates list
@@ -24,44 +26,68 @@ uv run tc rates convert --from USD --to EUR --from-date 2023-01-01 --to-date 202
 uv run ruff check .
 uv run ruff format .
 
-# Type check (mypy is used; see .mypy_cache)
-uv run mypy src
-```
+# Type check (ty)
+uv run ty check
 
-There is currently no test suite in the repository.
+# Tests (pytest, no network: see `fake_session` in tests/conftest.py)
+uv run pytest
+uv run pytest tests/test_cli.py -k monthly
+```
 
 ## Architecture
 
-The package lives under `src/twocents/` and is organized into four layers:
+`src/twocents/` is split into a click-free **library** and a **CLI** subpackage.
+The library must never import click; `tests/test_package.py` enforces this.
 
-- **`__init__.py`** — defines the root Click group `main` and registers subcommands.
-  `main` is the console-script entry point (`tc`).
-- **`commands/`** — Click command definitions, one module per command group.
-  `rates.py` holds the `rates` group with `list` and `convert` subcommands and owns all
-  CLI-level validation (date parsing, `--format`/`--file` pairing, granularity flags).
-  Commands orchestrate: call `RatesClient`, then hand the result to an exporter.
-- **`rates/client.py`** — `RatesClient` wraps the Banca d'Italia REST endpoints
-  (`currencies`, `dailyRates`, `dailyTimeSeries`, `monthlyAverageRates`,
-  `annualAverageRates`). Each method builds an endpoint string and delegates to
-  `_make_get_request`, which appends the `lang` query param and returns parsed JSON.
-- **`exporters/`** — output strategies. `base.Exporter` is the ABC (`export(file_path)`);
-  `JsonExporter` and `CsvExporter` write to files; `StdOutExporter` prints JSON to the
-  terminal (note: its `export()` takes no arguments, unlike the file exporters).
-- **`utils/`** — `parse_datetime`/`safe_parse_datetime` (strict `YYYY-MM-DD` parsing) and
-  `pretty_print.py` (ANSI-colored print helpers and `print_verbose`).
+Library:
+- **`__init__.py`**: the public API (`__all__`) and `__version__`. Re-exports
+  everything below, and attaches a `NullHandler` to the `twocents` logger.
+- **`client.py`**: `RatesClient`, one method per endpoint (`currencies`, `dailyRates`,
+  `dailyTimeSeries`, `monthlyAverageRates`, `annualAverageRates`). It uses a
+  `requests.Session` with `params=`, adds `lang`, and parses responses into models.
+  Network failures and non-200 responses raise `APIError`.
+- **`service.py`**: the high-level entry points `get_rates()` and `list_currencies()`.
+  It validates input and handles ranges: daily is one time-series call, monthly and
+  yearly are one call per month or year.
+- **`models.py`**: frozen dataclasses `Rate`, `Currency`, `Country`, plus the enums
+  `Granularity` and `ExchangeConvention`. Each model has `from_api()`, `to_dict()`
+  (JSON) and `to_row()` (flat, for CSV).
+- **`exporters.py`**: `Exporter` ABC with `dump(records, stream)` and
+  `export(records, path)`, implemented by `JsonExporter` and `CsvExporter`.
+  `EXPORTERS` maps format names to classes.
+- **`errors.py`**: `TwocentsError`, with subclasses `APIError` and
+  `InvalidDateRangeError` (the latter is also a `ValueError`).
+
+CLI (`cli/`, entry point `tc = twocents.cli:main`, also `python -m twocents`):
+- **`cli/__init__.py`**: the root group. It exits with an install hint if click is
+  missing.
+- **`cli/rates.py`**: `list` and `convert`. These only parse options and call
+  `service`.
+- **`cli/output.py`**: shared helpers. `verbose_option` adds a logging handler to
+  stderr for one invocation. `output_options` adds `--format` and `--file`.
+  `library_errors` maps `TwocentsError` to click errors. `write_records` writes the
+  output.
 
 ### Key conventions and gotchas
 
-- **Verbose output** is toggled by setting the `VERBOSE` env var; commands set it from a
-  `--verbose` flag, and `print_verbose` only prints when it is set.
-- **`_exclude_fields([...])` decorator** on `RatesClient` methods strips keys (e.g.
-  `resultsInfo`) from the returned dict before it reaches the caller.
-- **Monthly granularity** in `convert` is built client-side: it enumerates every
-  (year, month) between the two dates and calls `get_avg_monthly_exchange_rates` per
-  month, extending a flat list from each response's `rates` key. Daily granularity uses a
-  single time-series call. Note `--daily` defaults to `True`, so it runs unless another
-  flag path is taken.
-- **Ruff** (`ruff.toml`) enforces a strict rule set including pydocstyle (Google
-  convention), 80-char lines, single-line imports (isort `force-single-line`), and banned
-  relative imports — always use absolute `twocents.*` imports. `# noqa: T201` is used to
-  allow `print` in `pretty_print.py`.
+- **API quirks.** `currencyIsoCode` (our `reference_currency`) only accepts EUR, USD or
+  ITL; when only `currency` is one of those, `get_rates` swaps the pair and returns
+  `Rate.inverted()` copies (inversion happens before filling). `Rate.value`
+  direction depends on `exchangeConventionCode` (`C` or `I`); for
+  `dailyTimeSeries` that code and `isoCode` are only in `resultsInfo`, which the
+  client passes to `Rate.from_api(defaults=...)`. Unknown currencies and empty ranges
+  return 200 with no rates.
+- **Granularity flags** `--daily/--monthly/--yearly` share one `granularity` dest via
+  `flag_value`, so exactly one applies. `--fillup/--filldown/--fillmax` share a `fill`
+  dest the same way (`models.Fill`). They are daily only: `service._filled_daily`
+  fetches up to `FILL_WINDOW` beyond the range (never past today), then
+  `fill_rates` builds one rate per calendar day.
+- **Dates**: `get_rates` defaults `end` to today and `start` to `end`, so with no
+  dates you get today's rate.
+- **Tests** never hit the network. The `fake_session` fixture replaces
+  `requests.Session` and routes responses by endpoint. Realistic payload builders are
+  in `tests/payloads.py`.
+- **Ruff** (`ruff.toml`, target py313) enforces a strict rule set including pydocstyle
+  (Google convention; not enforced in `tests/`), 80-char lines, single-line imports
+  (isort `force-single-line`), and banned relative imports. Always use absolute
+  `twocents.*` imports.

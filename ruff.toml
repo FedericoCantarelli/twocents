@@ -1,6 +1,6 @@
 # Ruff configuration for Python
 
-target-version = "py310" # Adjust with your Python version
+target-version = "py313"
 line-length = 80
 indent-width = 4
 
@@ -54,3 +54,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
+
+[lint.per-file-ignores]
+# Test functions are self-describing; don't require docstrings in tests.
+"tests/**" = ["D"]
