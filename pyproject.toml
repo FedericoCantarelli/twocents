@@ -1,6 +1,6 @@
 [project]
 name = "twocents-xchange-rate"
-version = "0.1.0"
+version = "0.2.0"
 description = "Get exchange rates from Banca d'Italia. Available as a Python module and a CLI."
 readme = "README.md"
 authors = [
