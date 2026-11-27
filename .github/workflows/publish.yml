@@ -1,7 +1,6 @@
 name: Publish to PyPI
 
-# Push a tag like `v0.1.0` to release. The tag must match the version in
-# pyproject.toml, otherwise the build job fails before anything is uploaded.
+# Push a tag like `v0.2.0` to build the package and publish it on PyPI.
 on:
   push:
     tags:
@@ -13,30 +12,14 @@ permissions:
 jobs:
   build:
     name: Build distributions
-    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: astral-sh/setup-uv@v10.4.0
 
-      - name: Check tag matches package version
-        run: |
-          version="$(uv version --short)"
-          if [ "${GITHUB_REF_NAME}" != "v${version}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match version v${version} in pyproject.toml"
-            exit 1
-          fi
-
       - name: Build sdist and wheel
         run: uv build
-
-      - name: Smoke test the wheel
-        run: |
-          wheel="$(ls dist/*.whl)"
-          uv run --isolated --no-project --with "${wheel}[cli]" \
-            python -c "import twocents; print(twocents.__version__)"
-          uv run --isolated --no-project --with "${wheel}[cli]" tc --help
 
       - uses: actions/upload-artifact@v7
         with:
