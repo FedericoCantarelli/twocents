@@ -1,6 +1,6 @@
 """Command line interface for twocents (entry point: ``tc``).
 
-Requires the ``cli`` extra: ``pip install 'twocents[cli]'``.
+Requires the ``cli`` extra: ``pip install 'twocents-xchange-rate[cli]'``.
 """
 
 try:
@@ -8,7 +8,9 @@ try:
 except ModuleNotFoundError as e:  # pragma: no cover - depends on install
     raise SystemExit(
         "The twocents CLI requires click. Install it with:\n"
-        "    pip install 'twocents[cli]'   or   uv tool install 'twocents[cli]'"
+        "    pip install 'twocents-xchange-rate[cli]'\n"
+        "or\n"
+        "    uv tool install 'twocents-xchange-rate[cli]'"
     ) from e
 
 from twocents.cli.rates import rates

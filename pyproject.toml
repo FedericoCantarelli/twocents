@@ -1,7 +1,7 @@
 [project]
-name = "twocents"
+name = "twocents-xchange-rate"
 version = "0.1.0"
-description = "Exchange rates from Banca d'Italia, as a Python library and a CLI."
+description = "Get exchange rates from Banca d'Italia. Available as a Python module and a CLI."
 readme = "README.md"
 authors = [
     { name = "FedericoCantarelli", email = "fede.cantarelli98@gmail.com" }
@@ -25,7 +25,7 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "twocents[cli]",
+    "twocents-xchange-rate[cli]",
     "pytest>=9.2.0",
     "ruff>=0.17.6",
     "ty>=0.0.109",
@@ -34,3 +34,16 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.uv.build-backend]
+# The distribution is `twocents-xchange-rate`, but the import package stays
+# `twocents`.
+module-name = "twocents"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "$version"
+version_scheme = "semver2"
+version_provider = "uv"
+update_changelog_on_bump = true
+major_version_zero = true

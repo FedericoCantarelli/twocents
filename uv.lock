@@ -156,7 +156,7 @@ wheels = [
 ]
 
 [[package]]
-name = "twocents"
+name = "twocents-xchange-rate"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -172,7 +172,7 @@ cli = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
-    { name = "twocents", extra = ["cli"] },
+    { name = "twocents-xchange-rate", extra = ["cli"] },
     { name = "ty" },
 ]
 
@@ -187,7 +187,7 @@ provides-extras = ["cli"]
 dev = [
     { name = "pytest", specifier = ">=9.2.0" },
     { name = "ruff", specifier = ">=0.17.6" },
-    { name = "twocents", extras = ["cli"] },
+    { name = "twocents-xchange-rate", extras = ["cli"] },
     { name = "ty", specifier = ">=0.0.109" },
 ]
 

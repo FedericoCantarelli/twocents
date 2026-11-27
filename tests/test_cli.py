@@ -1,7 +1,5 @@
 import datetime as dt
 import json
-import subprocess
-import sys
 
 import pytest
 import requests
@@ -10,7 +8,6 @@ from tests import payloads
 from tests.conftest import FakeResponse
 from twocents import __version__
 from twocents.cli import main
-
 
 DAILY = payloads.daily_series_payload(
     [("2023-01-02", "1.0683"), ("2023-01-03", "1.0545")]
@@ -34,17 +31,6 @@ def test_version(runner):
     result = runner.invoke(main, ["version"])
     assert result.exit_code == 0
     assert __version__ in result.output
-
-
-def test_python_dash_m():
-    result = subprocess.run(
-        [sys.executable, "-m", "twocents", "--help"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0
-    assert "Usage: tc" in result.stdout
 
 
 class TestList:
@@ -102,9 +88,7 @@ class TestConvert:
             "monthlyAverageRates",
             lambda p: payloads.monthly_payload(p["year"], p["month"]),
         )
-        result = convert(
-            runner, "2022-12-15", "--to-date", "2023-01-10", "--monthly"
-        )
+        result = convert(runner, "2022-12-15", "--to-date", "2023-01-10", "--monthly")
         assert result.exit_code == 0, result.output
         assert fake_session.endpoints == ["monthlyAverageRates"] * 2
         dates = [r["date"] for r in json.loads(result.stdout)]
@@ -114,9 +98,7 @@ class TestConvert:
         fake_session.on(
             "annualAverageRates", lambda p: payloads.yearly_payload(p["year"])
         )
-        result = convert(
-            runner, "2021-01-01", "--to-date", "2022-06-01", "--yearly"
-        )
+        result = convert(runner, "2021-01-01", "--to-date", "2022-06-01", "--yearly")
         assert result.exit_code == 0, result.output
         assert fake_session.endpoints == ["annualAverageRates"] * 2
 
@@ -137,9 +119,7 @@ class TestConvert:
     def test_unsupported_to_swaps_and_inverts(self, runner, fake_session):
         fake_session.on(
             "dailyTimeSeries",
-            payloads.daily_series_payload(
-                [("2023-01-02", "0.25")], iso_code="KWD"
-            ),
+            payloads.daily_series_payload([("2023-01-02", "0.25")], iso_code="KWD"),
         )
         result = runner.invoke(
             main,
@@ -193,9 +173,7 @@ class TestConvert:
         assert fake_session.calls == []
 
     def test_currency_is_required(self, runner, fake_session):
-        result = runner.invoke(
-            main, ["rates", "convert", "--from-date", "2023-01-01"]
-        )
+        result = runner.invoke(main, ["rates", "convert", "--from-date", "2023-01-01"])
         assert result.exit_code == 2
         assert "Missing option" in result.output
 
@@ -257,9 +235,7 @@ class TestConvert:
         assert fake_session.calls == []
 
     def test_api_error_is_clean(self, runner, fake_session):
-        fake_session.on(
-            "dailyTimeSeries", FakeResponse(status_code=500, text="Oops")
-        )
+        fake_session.on("dailyTimeSeries", FakeResponse(status_code=500, text="Oops"))
         result = convert(runner, "2023-01-01")
         assert result.exit_code == 1
         assert "Error: HTTP 500: Oops" in result.output

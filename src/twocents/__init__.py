@@ -10,7 +10,7 @@ Library usage::
         print(rate.date, rate.currency_per_reference)
 
 The command line interface lives in :mod:`twocents.cli` and needs the ``cli``
-extra (``pip install 'twocents[cli]'``).
+extra (``pip install 'twocents-xchange-rate[cli]'``).
 """
 
 import logging
@@ -37,7 +37,7 @@ from twocents.service import list_currencies
 
 
 try:
-    __version__ = version("twocents")
+    __version__ = version("twocents-xchange-rate")
 except PackageNotFoundError:  # pragma: no cover - running from a raw checkout
     __version__ = "0.0.0-unknown"
 
